@@ -1,0 +1,50 @@
+FROM gentoo/portage:20220619 as portage
+FROM gentoo/stage3:20220619
+# copy the entire portage volume in
+COPY --from=portage /var/db/repos/gentoo /var/db/repos/gentoo
+
+ARG FEATURES="-ipc-sandbox -mount-sandbox -network-sandbox -pid-sandbox"
+
+
+ENV LANG=C.UTF-8
+
+RUN    echo 'PYTHON_TARGETS="python3_10"'       >> /etc/portage/make.conf \
+    && echo 'PYTHON_SINGLE_TARGET="python3_10"' >> /etc/portage/make.conf \
+    && echo 'RUBY_TARGETS="ruby27"'             >> /etc/portage/make.conf \
+    && echo 'FEATURES="'${FEATURES}'"'          >> /etc/portage/make.conf \
+    && echo 'USE="${USE} -introspection png"'   >> /etc/portage/make.conf
+
+
+# init
+RUN    emerge -DNu --with-bdeps=y --complete-graph=y @system @world \
+    && emerge --depclean                                            \
+       emerge @preserved-rebuild
+
+# vale-prereqs 1
+RUN    emerge dev-vcs/git cmake zip
+
+# vale-prereqs 2
+RUN    mkdir /etc/portage/profile                                             \
+    && echo "-gentoo-vm" >> /etc/portage/profile/use.stable.mask              \
+    && echo 'virtual/jdk ~amd64' >> /etc/portage/package.accept_keywords/java \
+    && echo 'virtual/jre ~amd64' >> /etc/portage/package.accept_keywords/java \
+    && echo "media-libs/harfbuzz -cairo" >> /etc/portage/package.use/no_cairo \
+    && emerge sbt-bin
+
+
+# cleanup
+RUN    emerge -DNu --with-bdeps=y --complete-graph=y @system @world \
+    && emerge --depclean                                            \
+    && emerge @preserved-rebuild       \
+    && eselect news read               \
+    && rm -frv /var/cache/distfiles/*  \
+    && rm -frv /tmp/*                  \
+    && rm -frv /usr/share/doc/*        \
+    && rm -frv /usr/share/man/*
+
+WORKDIR /
+CMD ["/bin/bash"]
+
+# docker build -t sheerluck/vale-prereqs:22.06  \
+#              -t sheerluck/vale-prereqs:latest \
+#              -f Dockerfile_22.06 .
