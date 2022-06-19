@@ -24,14 +24,13 @@ RUN    emerge -DNu --with-bdeps=y --complete-graph=y @system @world \
 RUN    emerge dev-vcs/git cmake zip
 
 # vale-prereqs 2
-RUN    mkdir /etc/portage/profile                                             \
-    && echo "-gentoo-vm" >> /etc/portage/profile/use.stable.mask              \
-    && echo 'virtual/jdk ~amd64' >> /etc/portage/package.accept_keywords/java \
-    && echo 'virtual/jre ~amd64' >> /etc/portage/package.accept_keywords/java \
-    && echo "media-libs/harfbuzz -cairo" >> /etc/portage/package.use/no_cairo \
+RUN    echo '>virtual/jdk-13' >> /etc/portage/package.mask/java          \
+    && echo '>virtual/jre-13' >> /etc/portage/package.mask/java          \
+    && echo ">dev-java/openjdk-bin-13" >> /etc/portage/package.mask/java \
+    && echo "media-libs/harfbuzz -cairo" >> /etc/portage/package.use/no  \
     && emerge sbt-bin
 
-
+    
 # cleanup
 RUN    emerge -DNu --with-bdeps=y --complete-graph=y @system @world \
     && emerge --depclean                                            \
